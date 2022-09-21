@@ -1,3 +1,9 @@
+Just a fork with some things changed for a pre-built docker image. I made this fork so I could host it on Unraid and figured I'd share what I have. I'm pretty inexperienced with all this so keep that in mind.
+
+Original readme below:
+
+---
+
 # Yet Another Stable Diffusion Discord Bot
 
 ![Yet Another Stable Diffusion Discord Bot Splash Image](https://github.com/AmericanPresidentJimmyCarter/yasd-discord-bot/blob/master/examples/yasd.jpg?raw=true)
