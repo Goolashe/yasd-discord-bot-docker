@@ -8,6 +8,7 @@ import traceback
 
 from copy import deepcopy
 from io import BytesIO
+from typing import Any
 from urllib.request import urlopen
 
 from PIL import Image, ImageDraw, ImageFilter, ImageOps
@@ -23,6 +24,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('suffix', help='Input/output file suffix')
 args = parser.parse_args()
 
+DOCARRAY_LOCATION_FN = lambda docarray_id: f'image_docarrays/{docarray_id}.bin'
+IMAGE_LOCATION_FN = lambda sid: f'images/{sid}.png'
 FILE_NAME_IN = f'temp_json/request-{args.suffix}.json'
 FILE_NAME_OUT = f'temp_json/output-{args.suffix}.json'
 
@@ -140,6 +143,12 @@ def resize_with_padding(img, expected_size):
     return Image.composite(expanded, noised, mask)
 
 
+def tweak_docarray_tags_request(doc_arr: DocumentArray, key: str, val: Any):
+    for doc in doc_arr:
+        if 'request' in doc.tags and isinstance(doc.tags['request'], dict):
+            doc.tags['request'][key] = val
+
+
 output = {}
 with open(FILE_NAME_IN, 'r') as request_json:
     request = json.load(request_json)
@@ -163,8 +172,8 @@ with open(FILE_NAME_IN, 'r') as request_json:
             da = Document(text=prompt.strip()).post(JINA_SERVER_URL,
                 parameters=params).matches
             short_id = short_id_generator()
-            image_loc = f'images/{short_id}.png'
-            docarray_loc = f'image_docarrays/{short_id}.bin'
+            image_loc = IMAGE_LOCATION_FN(short_id)
+            docarray_loc = DOCARRAY_LOCATION_FN(short_id)
 
             image = document_to_pil(da[0])
             orig_width, _ = image.size
@@ -224,8 +233,8 @@ with open(FILE_NAME_IN, 'r') as request_json:
             orig_width, _ = image.size
 
             short_id = short_id_generator()
-            image_loc = f'images/{short_id}.png'
-            docarray_loc = f'image_docarrays/{short_id}.bin'
+            image_loc = IMAGE_LOCATION_FN(short_id)
+            docarray_loc = DOCARRAY_LOCATION_FN(short_id)
             da.plot_image_sprites(output=image_loc, canvas_size=orig_width*2,
                 keep_aspect_ratio=True, show_index=True)
             da.save_binary(docarray_loc, protocol='protobuf', compress='lz4')
@@ -266,8 +275,8 @@ with open(FILE_NAME_IN, 'r') as request_json:
             orig_width, _ = image.size
 
             short_id = short_id_generator()
-            image_loc = f'images/{short_id}.png'
-            docarray_loc = f'image_docarrays/{short_id}.bin'
+            image_loc = IMAGE_LOCATION_FN(short_id)
+            docarray_loc = DOCARRAY_LOCATION_FN(short_id)
             da.plot_image_sprites(output=image_loc, canvas_size=orig_width*2,
                 keep_aspect_ratio=True, show_index=True)
             da.save_binary(docarray_loc, protocol='protobuf', compress='lz4')
@@ -291,7 +300,7 @@ with open(FILE_NAME_IN, 'r') as request_json:
             if not request.get('from_discord', False):
                 docarray_id = request['docarray_id']
                 idx = request['index']
-                old_docarray_loc = f'image_docarrays/{docarray_id}.bin'
+                old_docarray_loc = DOCARRAY_LOCATION_FN(docarray_id)
                 da = DocumentArray.load_binary(
                     old_docarray_loc, protocol='protobuf', compress='lz4'
                 )
@@ -315,12 +324,28 @@ with open(FILE_NAME_IN, 'r') as request_json:
                 _d.text = prompt
                 da = DocumentArray([_d])
 
+            if request.get('resize', False) is True and \
+                request.get('height', None) is not None and \
+                request.get('width', None) is not None:
+                resized_image = orig_image.resize((
+                    request['width'],
+                    request['height'],
+                ), Image.LANCZOS)
+                buffered = BytesIO()
+                resized_image.save(buffered, format='PNG')
+                _d = Document(
+                    blob=buffered.getvalue(),
+                    mime_type='image/png',
+                ).convert_blob_to_datauri()
+                _d.text = orig_prompt
+                da = DocumentArray([_d])
+
             params = {'num_images': 4}
             if request.get('height', None) is not None:
                 params['height'] = request['height']
             else:
                 params['height'] = orig_height
-            if request.get('latentless', None) is not None:
+            if request.get('latentless', False) is not False:
                 params['latentless'] = request['latentless']
             if request.get('prompt', None) is not None:
                 params['prompt'] = request['prompt']
@@ -330,6 +355,8 @@ with open(FILE_NAME_IN, 'r') as request_json:
                 params['scale'] = request['scale']
             if request.get('seed', None) is not None:
                 params['seed'] = request['seed']
+            if request.get('steps', None) is not None:
+                params['steps'] = request['steps']
             if request.get('strength', None) is not None:
                 params['strength'] = request['strength']
             if request.get('width', None) is not None:
@@ -338,8 +365,10 @@ with open(FILE_NAME_IN, 'r') as request_json:
                 params['width'] = orig_width
 
             diffused_da = None
-            if params['height'] != orig_height or \
-                params['width'] != orig_width:
+            if not request.get('resize', False) and (
+                    params['height'] != orig_height or
+                    params['width'] != orig_width
+                ):
                 img_new = resize_with_padding(orig_image,
                     (params['width'], params['height']))
                 buffered = BytesIO()
@@ -378,8 +407,11 @@ with open(FILE_NAME_IN, 'r') as request_json:
                     parameters=params)[0].matches
 
             short_id = short_id_generator()
-            image_loc = f'images/{short_id}.png'
-            docarray_loc = f'image_docarrays/{short_id}.bin'
+            image_loc = IMAGE_LOCATION_FN(short_id)
+            docarray_loc = DOCARRAY_LOCATION_FN(short_id)
+
+            tweak_docarray_tags_request(diffused_da, 'resize',
+                request.get('resize', False))
 
             diffused_da.plot_image_sprites(output=image_loc, show_index=True,
                 keep_aspect_ratio=True, canvas_size=params['width']*2)
@@ -396,13 +428,17 @@ with open(FILE_NAME_IN, 'r') as request_json:
             prompt = request['prompt']
 
             if request.get('height', None) is not None:
-                params['height'] = request['sampler']
+                params['height'] = request['height']
+            if request.get('resample_prior', True) is False:
+                params['resample_prior'] = request['resample_prior']
             if request.get('sampler', None) is not None:
                 params['sampler'] = request['sampler']
             if request.get('scale', None) is not None:
                 params['scale'] = request['scale']
             if request.get('seed', None) is not None:
                 params['seed'] = request['seed']
+            if request.get('steps', None) is not None:
+                params['steps'] = request['steps']
             if request.get('strength', None) is not None:
                 params['strength'] = request['strength']
             if request.get('width', None) is not None:
@@ -415,8 +451,8 @@ with open(FILE_NAME_IN, 'r') as request_json:
             orig_width, _ = image.size
 
             short_id = short_id_generator()
-            image_loc = f'images/{short_id}.png'
-            docarray_loc = f'image_docarrays/{short_id}.bin'
+            image_loc = IMAGE_LOCATION_FN(short_id)
+            docarray_loc = DOCARRAY_LOCATION_FN(short_id)
 
             interpolated_da.plot_image_sprites(output=image_loc, show_index=True,
                 keep_aspect_ratio=True, canvas_size=orig_width*3)
@@ -432,7 +468,7 @@ with open(FILE_NAME_IN, 'r') as request_json:
         if request['type'] == 'upscale':
             docarray_id = request['docarray_id']
             idx = request['index']
-            old_docarray_loc = f'image_docarrays/{docarray_id}.bin'
+            old_docarray_loc = DOCARRAY_LOCATION_FN(docarray_id)
             da  = DocumentArray.load_binary(
                 old_docarray_loc, protocol='protobuf', compress='lz4'
             )
@@ -442,7 +478,7 @@ with open(FILE_NAME_IN, 'r') as request_json:
             upscale = da[idx].post(f'{JINA_SERVER_URL}/upscale')
 
             short_id = short_id_generator()
-            image_loc = f'images/{short_id}.png'
+            image_loc = IMAGE_LOCATION_FN(short_id)
             image_loc_jpeg = f'images/{short_id}.jpg'
 
             da_upscale = DocumentArray([upscale])

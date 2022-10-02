@@ -9,3 +9,5 @@ diffusers
 torch
 transformers
 detoxify
+ftfy
+tqdm

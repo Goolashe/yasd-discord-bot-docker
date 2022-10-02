@@ -14,7 +14,7 @@ def remove_quotes_from_cmd_kwargs(cmd_kwargs):
     return ', '.join(keywordarg_list)
 
 
-def prompt_un_parenthesis(prompt):
+def prompt_un_parenthesis_un_comma(prompt, uncomma=False):
     '''
     Handle parenthesis in slash command prompts.
     '''
@@ -22,6 +22,8 @@ def prompt_un_parenthesis(prompt):
         prompt = prompt.replace('(', '「')
     if ')' in prompt:
         prompt = prompt.replace(')', '」')
+    if uncomma and ',' in prompt:
+        prompt = prompt.replace(',', '，')
     return prompt
 
 
@@ -58,7 +60,7 @@ def serialize_image_request(
         options = f'{options[:-1]}'
         options = remove_quotes_from_cmd_kwargs(options)
 
-    prompt = prompt_un_parenthesis(prompt)
+    prompt = prompt_un_parenthesis_un_comma(prompt)
 
     as_string = f'>image {prompt}'
     if options == '':
@@ -74,9 +76,11 @@ def serialize_riff_request(
     iterations: Optional[int]=None,
     latentless: bool=False,
     prompt: Optional[str]=None,
+    resize: bool=False,
     sampler: Optional[str]=None,
     scale: Optional[float]=None,
     seed: Optional[int]=None,
+    steps: Optional[int]=None,
     strength: Optional[float]=None,
     width: Optional[int]=None,
 ):
@@ -88,17 +92,21 @@ def serialize_riff_request(
         options += f'{height=},'
     if iterations is not None:
         options += f'{iterations=},'
-    if latentless is not None:
+    if latentless is True:
         options += f'{latentless=},'
     if prompt is not None:
-        prompt = prompt_un_parenthesis(prompt)
+        prompt = prompt_un_parenthesis_un_comma(prompt, uncomma=True)
         options += f'{prompt=},'
+    if resize is True:
+        options += f'{resize=},'
     if sampler is not None:
         options += f'{sampler=},'
     if scale is not None:
         options += f'{scale=},'
     if seed is not None:
         options += f'{seed=},'
+    if steps is not None:
+        options += f'{steps=},'
     if strength is not None:
         options += f'{strength=},'
     if width is not None:
@@ -118,9 +126,11 @@ def serialize_interpolate_request(
     prompt2: str,
 
     height: Optional[int]=None,
+    resample_prior: bool=True,
     sampler: Optional[str]=None,
     scale: Optional[float]=None,
     seed: Optional[int]=None,
+    steps: Optional[int]=None,
     strength: Optional[float]=None,
     width: Optional[int]=None,
 ):
@@ -130,12 +140,16 @@ def serialize_interpolate_request(
     options = ''
     if height is not None:
         options += f'{height=},'
+    if resample_prior is False:
+        options += 'resample_prior=False,'
     if sampler is not None:
         options += f'{sampler=},'
     if scale is not None:
         options += f'{scale=},'
     if seed is not None:
         options += f'{seed=},'
+    if steps is not None:
+        options += f'{steps=},'
     if strength is not None:
         options += f'{strength=},'
     if width is not None:
@@ -144,10 +158,10 @@ def serialize_interpolate_request(
         options = f'{options[:-1]}'
         options = remove_quotes_from_cmd_kwargs(options)
 
-    prompt1 = prompt_un_parenthesis(prompt1)
+    prompt1 = prompt_un_parenthesis_un_comma(prompt1)
     if '|' in prompt1:
         prompt1 = prompt1.replace('|', '')
-    prompt2 = prompt_un_parenthesis(prompt2)
+    prompt2 = prompt_un_parenthesis_un_comma(prompt2)
     if '|' in prompt2:
         prompt2 = prompt2.replace('|', '')
 
