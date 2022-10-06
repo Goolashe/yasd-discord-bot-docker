@@ -11,7 +11,7 @@ import sys
 import time
 
 from io import BytesIO
-from typing import Optional, Union
+from typing import Any, Optional, Union
 from urllib.error import URLError
 from urllib.request import urlopen
 
@@ -243,9 +243,10 @@ def check_safety(img_loc):
         _, has_nsfw_concept = safety_checker(
             images=[img_to_tensor(img)],
             clip_input=safety_checker_input.pixel_values)
-    except Exception as e:
+    except Exception:
         import traceback
         traceback.print_exc()
+        return False
     return has_nsfw_concept[0]
 
 
@@ -364,6 +365,25 @@ async def check_subprompt_token_length(
                 'or break into multiple weighted subprompts.')
             return False
     return True
+
+
+def tweak_docarray_tags_request(
+    docarray_id: str,
+    kvs: dict[str, Any],
+):
+    '''
+    Load a DocArray, tweaks the request tag, then save it.
+    '''
+    docarray_loc = DOCARRAY_LOCATION_FN(docarray_id)
+    doc_arr = DocumentArray.load_binary(
+        docarray_loc, protocol='protobuf', compress='lz4'
+    )
+    for doc in doc_arr:
+        if 'request' in doc.tags and isinstance(doc.tags['request'], dict):
+            doc.tags['request'] = { **doc.tags['request'], **kvs }
+
+    doc_arr.save_binary(docarray_loc, protocol='protobuf',
+        compress='lz4')
 
 
 intents = discord.Intents(
@@ -883,6 +903,9 @@ async def _image(
             raise Exception(err)
         image_loc = output['image_loc']
         short_id = output['id']
+        tweak_docarray_tags_request(short_id, {
+            'user_id': user.id,
+        })
         seeds = output.get('seeds', None)
 
         file = to_discord_file_and_maybe_check_safety(image_loc)
@@ -1071,6 +1094,10 @@ async def _riff(
             raise Exception(err)
         image_loc = output['image_loc']
         short_id = output['id']
+        tweak_docarray_tags_request(short_id, {
+            'original_image': docarray_id,
+            'user_id': user.id,
+        })
 
         file = to_discord_file_and_maybe_check_safety(image_loc)
         btns = FourImageButtons(message_id=work_msg.id, idx_parent=idx,
@@ -1179,6 +1206,7 @@ async def riff(
     height='Height of the image (default=512)',
     iterations='Number of diffusion iterations (1 to 16, default=1)',
     latentless='Do not compute latent embeddings from original image (default=False)',
+    resize='Resize the image when adjusting width/height instead of attempting outriff (default=False)',
     sampler='Which sampling algorithm to use (k_lms, ddim, dpm2, dpm2_ancestral, heun, euler, or euler_ancestral. default=k_lms)',
     scale='Conditioning scale for prompt (1.0 to 50.0, default=7.5)',
     seed='Deterministic seed for prompt (1 to 2^32-1, default=random)',
@@ -1199,6 +1227,7 @@ async def image2image(
     height: Optional[app_commands.Choice[int]] = None,
     iterations: Optional[app_commands.Range[int, MIN_ITERATIONS, MAX_ITERATIONS]] = None,
     latentless: Optional[bool]=False,
+    resize: Optional[bool]=False,
     sampler: Optional[app_commands.Choice[str]] = None,
     scale: Optional[app_commands.Range[float, MIN_SCALE, MAX_SCALE]] = None,
     seed: Optional[app_commands.Range[int, 0, MAX_SEED]] = None,
@@ -1254,6 +1283,7 @@ async def image2image(
         iterations=iterations,
         latentless=bool(latentless),
         prompt=prompt,
+        resize=bool(resize),
         sampler=sampler.value if sampler is not None else None,
         scale=scale,
         seed=seed,
@@ -1354,6 +1384,9 @@ async def _interpolate(
             raise Exception(err)
         image_loc = output['image_loc']
         short_id = output['id']
+        tweak_docarray_tags_request(short_id, {
+            'user_id': user.id,
+        })
 
         file = to_discord_file_and_maybe_check_safety(image_loc)
         work_msg = await work_msg.edit(
@@ -1609,7 +1642,7 @@ async def on_message(message):
         message.clean_content.startswith('>riff '):
         msg_split = message.clean_content.split(' ')
         if len(msg_split) < 3:
-            message.channel.send('Riff requires at least two arguments')
+            await message.channel.send('Riff requires at least two arguments')
             return
 
         docarray_id = msg_split[1]
@@ -1728,7 +1761,9 @@ async def on_message(message):
             try:
                 image = Image.open(BytesIO(image_bytes))
             except Exception:
-                message.channel.send(
+                import traceback
+                traceback.print_exc()
+                await message.channel.send(
                     f'Could not load image file for attachment {message.attachments[0].filename}')
                 return
 
@@ -1920,7 +1955,7 @@ async def on_message(message):
         message.clean_content.startswith('>upscale '):
         msg_split = message.clean_content.split(' ')
         if len(msg_split) < 3:
-            message.channel.send('Riff requires at least two arguments')
+            await message.channel.send('Upscale requires at least two arguments')
             return
 
         docarray_id = msg_split[1]
@@ -1944,7 +1979,7 @@ async def on_message(message):
             try:
                 image = Image.open(BytesIO(image_bytes))
             except Exception:
-                message.channel.send(f'Could not load image file for attachment {i}')
+                await message.channel.send(f'Could not load image file for attachment {i}')
                 continue
 
             image = resize_image(image).convert('RGB')
