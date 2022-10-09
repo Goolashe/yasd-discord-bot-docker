@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.8.0-runtime-ubuntu22.04
+FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -q && \
@@ -14,7 +14,6 @@ WORKDIR /app
 
 ENV BOT_TOKEN=YOUR_DISCORD_BOT_TOKEN
 ENV GUILD=YOUR_GUILD_ID
-#ENV PRINT_TOKENS="NO"
 
 RUN echo "Cloning Project" && git clone https://github.com/Goolashe/yasd-discord-bot-docker
 
@@ -24,8 +23,10 @@ RUN cd /app/yasd-discord-bot-docker \
 
 RUN cd /app/yasd-discord-bot-docker && pip install -r requirements_nsfw_filter.txt
 
-# symlink to mount output images to host
+# symlink to mount output images and such to host
 RUN mkdir -p /images/ && ln -s /images/ /app/images
+RUN mkdir -p /image_docarrays/ && ln -s /image_docarrays/ /app/image_docarrays
+RUN mkdir -p /temp_json/ && ln -s /temp_json/ /app/temp_json
 
 COPY entrypoint.sh /app/
 RUN chmod 0775 /app/entrypoint.sh
