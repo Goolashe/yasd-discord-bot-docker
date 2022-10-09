@@ -102,7 +102,7 @@ user_image_generation_nonces: dict[str, int] = {}
 BUTTON_STORE_FOUR_IMAGES_BUTTONS_KEY = 'four_img_views'
 button_store_dict: dict[str, list] = { BUTTON_STORE_FOUR_IMAGES_BUTTONS_KEY: [] }
 
-MANUAL_LINK = 'https://github.com/AmericanPresidentJimmyCarter/yasd-discord-bot/tree/master/manual#readme'
+MANUAL_LINK = 'https://github.com/Goolashe/yasd-discord-bot-docker/tree/master/manual#readme'
 SD_CONCEPTS_URL_FN = lambda concept: f'https://huggingface.co/sd-concepts-library/{concept}/resolve/main/'
 
 REGEX_FOR_ID = re.compile('([0-9a-zA-Z]){12}$')

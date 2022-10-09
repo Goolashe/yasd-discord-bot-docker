@@ -14,10 +14,9 @@ from urllib.request import urlopen
 from PIL import Image, ImageDraw, ImageFilter, ImageOps
 from docarray import Document, DocumentArray
 
-# You may need to set this environmental variable.
+# You will need to set this environmental variable. Had to remove alternative local URL check as it would always fail otherwise.
 ENV_SERVER_URL = 'DALLE_FLOW_SERVER'
-JINA_SERVER_URL = os.environ.get(ENV_SERVER_URL, False) or \
-    'grpc://127.0.0.1:51005'
+JINA_SERVER_URL = os.environ.get(ENV_SERVER_URL)
 ID_LENGTH = 12
 
 parser = argparse.ArgumentParser()
