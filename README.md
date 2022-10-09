@@ -1,4 +1,18 @@
-Just a fork with some things changed for a pre-built docker image. I made this fork so I could host it on Unraid and figured I'd share what I have. I'm pretty inexperienced with all this so keep that in mind.
+Just a fork with some things changed for a pre-built docker image. I made this fork so I could host it on [Unraid](https://unraid.net/) and figured I'd share what I have. I'm pretty inexperienced with all this so keep that in mind.
+
+Definable variables include:
+
+- `BOT_TOKEN` - Discord token for your bot
+- `GUILD` - Discord server ID
+- `PRINT_TOKENS_ENABLE` - "`YES`" to print the above "`BOT_TOKEN`" and "`GUILD`" variables into the log. Exists to help debug some bot issues. (optional)
+- `DALLE_FLOW_SERVER` - IP/URL of your (required) [Jina Dalle-flow](https://hub.docker.com/r/jinaai/dalle-flow) server/docker (example: `grpc://127.0.0.1:51005/`)
+- `QUEUEING_ALLOWED` - "`YES`" to launch with "`--allow-queue`" (optional)
+- `NSFW_SPOILER_ENABLE` - Defining "`YES`" to launch with "`--nsfw-auto-spoiler`". You have to be running the docker with NSFW filter requirements installed. Uses more VRAM (see original readme below). (optional)
+- `MINIMUM_STEPS` - Sets a minimum number of diffusing steps. Default is `10` (optional)
+- `MAXIMUM_STEPS` - Sets a maximum number of diffusing steps. Default is `250` (optional)
+
+[The built docker images of this bot can be found here](https://hub.docker.com/r/goolashe/yasd-discord-bot)
+
 
 Original readme below:
 
