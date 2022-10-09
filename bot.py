@@ -965,7 +965,7 @@ async def _image(
     scale='Conditioning scale for prompt (1.0 to 50.0, default=7.5)',
     seed='Deterministic seed for prompt (1 to 2^32-1, default=random)',
     seed_search='Seed searching mode, enumerates 9 different seeds starting at given seed (default=False)',
-    steps=f'Number of steps to perform ({args.MIN_STEPS} to {args.MAX_STEPS}, default={args.default_steps})',
+    steps=f'Number of steps to perform ({MIN_STEPS} to {MAX_STEPS}, default={args.default_steps})',
     width='Width of the image (default=512)',
 )
 @app_commands.choices(
