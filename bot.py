@@ -108,6 +108,10 @@ SD_CONCEPTS_URL_FN = lambda concept: f'https://huggingface.co/sd-concepts-librar
 REGEX_FOR_ID = re.compile('([0-9a-zA-Z]){12}$')
 REGEX_FOR_TAGS = re.compile('<.*?>')
 
+# Enabling env defining of min/max steps in case you want deep-fried garbage at 5 steps or something
+ENV_MIN_STEPS = '10'
+ENV_MAX_STEPS = '250'
+
 ID_LENGTH = 12
 BUTTON_STORE = f'temp_json/button-store-{str(guild)}.json'
 CLIP_TOKENIZER_MERGES_FN = 'clip_vit_large_patch14/merges.txt'
@@ -122,8 +126,8 @@ MAX_ITERATIONS = 16
 MIN_SCALE = 1.0
 MAX_SCALE = 50.0
 MAX_SEED = 2 ** 32 - 1
-MIN_STEPS = 10
-MAX_STEPS = 250
+MIN_STEPS = os.environ.get(ENV_MIN_STEPS)
+MAX_STEPS = os.environ.get(ENV_MAX_STEPS)
 MIN_STRENGTH = 0.01
 MIN_STRENGTH_INTERPOLATE = 0.50
 MAX_STRENGTH = 0.99
@@ -961,7 +965,7 @@ async def _image(
     scale='Conditioning scale for prompt (1.0 to 50.0, default=7.5)',
     seed='Deterministic seed for prompt (1 to 2^32-1, default=random)',
     seed_search='Seed searching mode, enumerates 9 different seeds starting at given seed (default=False)',
-    steps=f'Number of steps to perform (10 to 250, default={args.default_steps})',
+    steps=f'Number of steps to perform ({args.MIN_STEPS} to {args.MAX_STEPS}, default={args.default_steps})',
     width='Width of the image (default=512)',
 )
 @app_commands.choices(
