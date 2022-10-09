@@ -108,9 +108,9 @@ SD_CONCEPTS_URL_FN = lambda concept: f'https://huggingface.co/sd-concepts-librar
 REGEX_FOR_ID = re.compile('([0-9a-zA-Z]){12}$')
 REGEX_FOR_TAGS = re.compile('<.*?>')
 
-# Enabling env defining of min/max steps in case you want deep-fried garbage at 5 steps or something
-ENV_MIN_STEPS = '10'
-ENV_MAX_STEPS = '250'
+# Enabling env defining of min/max steps in case you want deep-fried garbage at 5 steps or something, or a more reasonable/insane max
+ENV_MIN_STEPS = 'MINIMUM_STEPS'
+ENV_MAX_STEPS = 'MAXIMUM_STEPS'
 
 ID_LENGTH = 12
 BUTTON_STORE = f'temp_json/button-store-{str(guild)}.json'
@@ -126,8 +126,10 @@ MAX_ITERATIONS = 16
 MIN_SCALE = 1.0
 MAX_SCALE = 50.0
 MAX_SEED = 2 ** 32 - 1
-MIN_STEPS = os.environ.get(ENV_MIN_STEPS)
-MAX_STEPS = os.environ.get(ENV_MAX_STEPS)
+MIN_STEPS = os.environ.get(ENV_MIN_STEPS, False) or \
+    '10'
+MAX_STEPS = os.environ.get(ENV_MAX_STEPS, False) or \
+    '250'
 MIN_STRENGTH = 0.01
 MIN_STRENGTH_INTERPOLATE = 0.50
 MAX_STRENGTH = 0.99
